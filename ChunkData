@@ -1,0 +1,39 @@
+class_name ChunkData
+extends RefCounted
+
+const SIZE:=16
+
+var coord:=Vector2i.ZERO
+
+var parent_deca:=Vector2i.ZERO
+
+## id биома
+var biome:int=0
+
+## Изменялся игроком?
+var dirty:=false
+
+## Все тайлы чанка
+var tiles:Array[TileData]=[]
+
+## Постройки
+var buildings=[]
+
+## NPC
+var entities=[]
+
+func _init():
+
+	tiles.resize(SIZE*SIZE)
+
+	for i in tiles.size():
+
+		tiles[i]=TileData.new()
+
+func get_tile(x:int,y:int)->TileData:
+
+	return tiles[y*SIZE+x]
+
+func set_tile(x:int,y:int,tile:TileData):
+
+	tiles[y*SIZE+x]=tile
