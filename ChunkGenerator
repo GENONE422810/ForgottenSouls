@@ -1,0 +1,58 @@
+class_name ChunkGenerator
+extends RefCounted
+
+const SIZE := ChunkData.SIZE
+
+static func generate(coord: Vector2i, deca: DecaChunkData, graph: WorldGraph = null) -> ChunkData:
+	var chunk := ChunkData.new()
+	chunk.coord = coord
+	chunk.parent_deca = deca.coord
+	chunk.dominant_biome = TerrainGenerator.biome_to_name(deca.terrain)
+
+	var biome_counter: Dictionary = {}
+	var neighbor_profile := null
+	if graph != null:
+		neighbor_profile = graph.get_neighbor_average_profile(deca.coord)
+
+	for y in range(SIZE):
+		for x in range(SIZE):
+			var local_pos := Vector2i(x, y)
+			var world_pos := coord * SIZE + local_pos
+
+			var height := WorldSeed.height(Vector2(world_pos))
+			var moisture := WorldSeed.moisture(Vector2(world_pos))
+			var coast := CoastGenerator.get_coast_factor(coord, local_pos, deca, graph)
+			var biome := TerrainGenerator.choose_tile_biome(
+				deca.climate,
+				deca.terrain,
+				height,
+				moisture,
+				coast,
+				neighbor_profile,
+				local_pos
+			)
+
+			var tile := TileData.new()
+			tile.atlas = BiomeData.get_tile(biome)
+			tile.height = height
+			tile.flags = 0
+
+			chunk.set_tile(x, y, tile)
+
+			var biome_name := TerrainGenerator.biome_to_name(biome)
+			biome_counter[biome_name] = int(biome_counter.get(biome_name, 0)) + 1
+
+	chunk.dominant_biome = _dominant_biome(biome_counter)
+	return chunk
+
+static func _dominant_biome(counter: Dictionary) -> String:
+	var best := "plains"
+	var best_count := -1
+
+	for k in counter.keys():
+		var count := int(counter[k])
+		if count > best_count:
+			best_count = count
+			best = str(k)
+
+	return best
