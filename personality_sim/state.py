@@ -88,3 +88,25 @@ class MentalState:
 
     def attitude(self, who: str) -> float:
         return self.attitudes.get(who, 0.0)
+
+    # --- сохранение ---
+    def to_dict(self) -> dict:
+        return {
+            "mood": {"pleasure": self.mood.pleasure, "arousal": self.mood.arousal,
+                     "dominance": self.mood.dominance},
+            "needs": dict(self.needs),
+            "stamina": self.stamina,
+            "attitudes": dict(self.attitudes),
+            "episodes": [{"what": e.what, "who": e.who, "valence": e.valence,
+                          "weight": e.weight, "tick": e.tick} for e in self.episodes],
+        }
+
+    @staticmethod
+    def from_dict(d: dict) -> "MentalState":
+        st = MentalState()
+        st.mood = Mood(**d.get("mood", {}))
+        st.needs.update(d.get("needs", {}))
+        st.stamina = d.get("stamina", 1.0)
+        st.attitudes = dict(d.get("attitudes", {}))
+        st.episodes = [Episode(**e) for e in d.get("episodes", [])]
+        return st

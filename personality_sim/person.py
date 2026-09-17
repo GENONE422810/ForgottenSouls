@@ -8,7 +8,7 @@
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 
 from . import archetypes as arch
 from . import temperament as tmp
@@ -227,6 +227,40 @@ class Person:
         util -= risk * (1.5 - boldness)
         util *= 0.5 + self.state.stamina * 0.5
         return util
+
+    # ------------------------------------------------------------------
+    # сохранение / загрузка
+    # ------------------------------------------------------------------
+    def to_dict(self) -> dict:
+        """Полный слепок: и личность, и память. Кладётся в сейв как есть."""
+        return {
+            "name": self.name, "age": self.age, "role": self.role,
+            "background": self.background,
+            "archetype_mix": dict(self.archetype_mix),
+            "temperament": self.temperament.as_dict(),
+            "character": dict(self.character.axes),
+            "desires": [asdict(d) for d in self.desires],
+            "habits": [asdict(h) for h in self.habits],
+            "abilities": dict(self.abilities.skills),
+            "self_concept": asdict(self.self_concept),
+            "state": self.state.to_dict(),
+        }
+
+    @staticmethod
+    def from_dict(d: dict) -> "Person":
+        p = Person(
+            name=d["name"], age=d.get("age", 30), role=d.get("role", ""),
+            background=d.get("background", ""),
+            archetype=d.get("archetype_mix"),
+            temperament=Temperament(**d["temperament"]),
+            character=Character(axes=dict(d.get("character", {}))),
+            desires=[Desire(**x) for x in d.get("desires", [])],
+            habits=[Habit(**x) for x in d.get("habits", [])],
+            abilities=Abilities(skills=dict(d.get("abilities", {}))),
+            self_concept=SelfConcept(**d["self_concept"]) if "self_concept" in d else None,
+        )
+        p.state = MentalState.from_dict(d.get("state", {}))
+        return p
 
     def __repr__(self) -> str:
         return (f"<Person {self.name}: {tmp.RU[tmp.label(self.temperament)]}/"
