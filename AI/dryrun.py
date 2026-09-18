@@ -1,0 +1,121 @@
+"""Прогон без обращения к модели.
+
+Подставляет заглушку вместо LLM и печатает, что именно ушло бы каждому
+персонажу. Нужен, чтобы проверять изоляцию состава и размер промпта,
+не тратя запросы.
+"""
+from __future__ import annotations
+
+from AI.Roles.empath import Empath
+from AI.scene import MapPerson, Scene
+from Person import Abilities, Desire, Habit, Person, SelfConcept
+from Person.demo import make_guard
+
+
+class StubLLM:
+    """Ничего не шлёт. Складывает запросы и отдаёт болванку."""
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    def complete(self, system, messages, **kw) -> str:
+        self.calls.append({"system": system, "messages": messages})
+        return "(реплика заглушки)"
+
+
+def make_thief() -> Person:
+    return Person(
+        name="Аэн",
+        age=23,
+        role="контрабандистка",
+        background="Выросла в порту, водит людей мимо постов за долю.",
+        archetype={"Rebel": 0.6, "Explorer": 0.4},
+        temperament={"Sanguine": 0.7, "Choleric": 0.3},
+        desires=[
+            Desire("Уйти из города до рассвета", need="autonomy", weight=0.9, horizon="now"),
+            Desire("Выкупить брата из долговой ямы", need="belonging",
+                   weight=0.85, horizon="life", secret=True),
+        ],
+        habits=[Habit("врёт", "смотрит слишком прямо в глаза", 0.7)],
+        abilities=Abilities({"воровство": 0.8, "болтовня": 0.7, "меч": 0.2}),
+        self_concept=SelfConcept(self_esteem=0.3,
+                                 identity=["Ты не воровка, ты проводница"],
+                                 denied=["что брат о тебе и не вспомнит"]),
+    )
+
+
+def main() -> None:
+    stub = StubLLM()
+    empath = Empath(stub)
+
+    scene = Scene(scene_id="dry", place="караулка", situation="ночь, дождь")
+    guard, thief = make_guard(), make_thief()
+    guard.state.attitudes["Аэн"] = -0.5
+    guard.state.needs["order"] = 0.8
+    guard.state.apply(guard.temperament, dp=-0.6, da=+0.7, dd=-0.4, cost=0.5)
+    thief.state.attitudes["Ведор Крайн"] = -0.2
+
+    scene.add(MapPerson(guard, kind="человек"))
+    scene.add(MapPerson(thief, kind="человек", female=True))
+
+    print("=" * 68)
+    print("КРУГ 1 — отвечает только стража (only=[...])")
+    print("=" * 68)
+    empath.play(scene, player_text="Пропусти нас, начальник.",
+                only=["Ведор Крайн"],
+                intents={"Ведор Крайн": "отказать и потребовать подорожную"})
+    _report(stub, scene)
+
+    print()
+    print("=" * 68)
+    print("КРУГ 2 — отвечают оба, по очереди")
+    print("=" * 68)
+    stub.calls.clear()
+    empath.play(scene, player_text="У нас нет бумаг.")
+    _report(stub, scene)
+
+    print()
+    print("=" * 68)
+    print("ПРОВЕРКИ ИЗОЛЯЦИИ")
+    print("=" * 68)
+    guard_call = stub.calls[0]
+    thief_call = stub.calls[1]
+    guard_text = "\n".join(guard_call["system"])
+    thief_text = "\n".join(thief_call["system"])
+
+    checks = [
+        ("тайна воровки не попала в промпт стражи",
+         "Выкупить брата" not in guard_text),
+        ("слепое пятно воровки не попало в промпт стражи",
+         "брат о тебе и не вспомнит" not in guard_text),
+        ("тайна стражи не попала в промпт воровки",
+         "сделал всё, что мог" not in thief_text),
+        ("стража видит воровку только снаружи",
+         "Аэн" in guard_text and "контрабандистка" not in guard_text),
+        ("стабильный блок у каждого свой",
+         guard_call["system"][0] != thief_call["system"][0]),
+        ("состав не протёк из прошлого круга",
+         guard_text.count("Ты отыгрываешь персонажа") == 1),
+    ]
+    for label, ok in checks:
+        print(f"  [{'OK' if ok else 'ПРОВАЛ'}] {label}")
+
+    print()
+    print("Размер промпта (символов):")
+    for c in stub.calls:
+        name = c["system"][0].split("по имени ")[1].split(",")[0]
+        print(f"  {name:16} stable={len(c['system'][0]):5}  "
+              f"volatile={len(c['system'][1]):5}  реплик={len(c['messages'])}")
+
+
+def _report(stub: StubLLM, scene: Scene) -> None:
+    print(f"вызовов к модели: {len(stub.calls)}")
+    for c in stub.calls:
+        name = c["system"][0].split("по имени ")[1].split(",")[0]
+        print(f"  -> {name}")
+    print("лог сцены:")
+    for line in scene.log:
+        print(f"  {line.speaker}: {line.text}")
+
+
+if __name__ == "__main__":
+    main()

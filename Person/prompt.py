@@ -253,3 +253,25 @@ def _volatile(s, scene: str = "") -> str:
     if scene:
         p.append(f"\nОбстановка: {scene}")
     return "\n".join(p)
+
+
+def outward_impression(person) -> str:
+    """Как персонаж выглядит СО СТОРОНЫ.
+
+    Другие не читают его мыслей: им видна только та часть состояния,
+    которую он не сумел спрятать. Насколько сумел — решает темперамент:
+    флегматика не прочитаешь, холерик весь наружу.
+    """
+    t = person.temperament
+    m = person.state.mood
+    show = max(0.15, min(1.0, t.reactivity * (1.0 - t.inertia * 0.25)))
+    p, a = m.pleasure * show, m.arousal * show
+
+    face = _band(p, ("лицо мрачное", "вид недовольный",
+                     "выражение обычное", "выглядит довольным"))
+    body = _band(a, ("движения вялые", "держится спокойно",
+                     "заметно напряжён", "не находит себе места"))
+    out = f"{face}, {body}"
+    if person.state.stamina < 0.35:
+        out += ", вид усталый"
+    return out
