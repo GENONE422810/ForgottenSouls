@@ -125,7 +125,7 @@ class Person:
         self.state = MentalState()
         self.drives = arch.drives_from(self.archetype_mix)
 
-        self._cache: dict[str | None, PersonaPrompt] = {}
+        self._cache: dict[tuple, PersonaPrompt] = {}
         self._dirty = True
 
     # ------------------------------------------------------------------
@@ -186,22 +186,23 @@ class Person:
     # ------------------------------------------------------------------
     # ШАГ 3: системный промпт
     # ------------------------------------------------------------------
-    def system_prompt(self, interlocutor=None, scene: str = "") -> PersonaPrompt:
+    def system_prompt(self, interlocutor=None, scene: str = "",
+                      private: bool = True) -> PersonaPrompt:
         """Промпт для обработчика-эмпата.
 
         Возвращает две части: stable (кешируется провайдером, одинакова
         всегда) и volatile (состояние на этот тик, меняется каждый раз).
         """
         who = Interlocutor.of(interlocutor)
-        key = who.name if who else None
+        key = (who.name if who else None, private)
         if self._dirty or key not in self._cache:
-            self._cache[key] = render(self.assemble(who), scene)
+            self._cache[key] = render(self.assemble(who), scene, private)
             self._dirty = False
         else:
             # личность та же — пересобираем только летучую часть
             self._cache[key] = PersonaPrompt(
                 stable=self._cache[key].stable,
-                volatile=render(self.assemble(who), scene).volatile,
+                volatile=render(self.assemble(who), scene, private).volatile,
             )
         return self._cache[key]
 

@@ -96,11 +96,16 @@ def _reply_length_rule(verbosity: float) -> str:
 
 
 # --- сборка -----------------------------------------------------------------
-def render(snap, scene: str = "") -> PersonaPrompt:
-    return PersonaPrompt(stable=_stable(snap), volatile=_volatile(snap, scene))
+def render(snap, scene: str = "", private: bool = True) -> PersonaPrompt:
+    """private=False убирает СОДЕРЖАНИЕ тайн, оставляя их поведенческий след.
+
+    Нужно для пакетного режима: в одном контексте несколько персонажей,
+    и тайное желание одного иначе окажется на виду у остальных.
+    """
+    return PersonaPrompt(stable=_stable(snap, private), volatile=_volatile(snap, scene))
 
 
-def _stable(s) -> str:
+def _stable(s, private: bool = True) -> str:
     p: list[str] = []
     p.append(
         f"Ты отыгрываешь персонажа по имени {s.name}"
@@ -144,10 +149,17 @@ def _stable(s) -> str:
             f"- {d.text}" + (" (это для тебя главное)" if d.weight > 0.75 else "")
             for d in sorted(open_d, key=lambda x: -x.weight)))
     if secret_d:
-        p.append("\n# Чего ты хочешь, но вслух не скажешь\n" + "\n".join(
-            f"- {d.text}" for d in secret_d)
-            + "\nЭто правит твоими поступками, но прямо ты об этом не говоришь. "
-              "Если разговор подходит близко — уводишь в сторону.")
+        if private:
+            p.append("\n# Чего ты хочешь, но вслух не скажешь\n" + "\n".join(
+                f"- {d.text}" for d in secret_d)
+                + "\nЭто правит твоими поступками, но прямо ты об этом не говоришь. "
+                  "Если разговор подходит близко — уводишь в сторону.")
+        else:
+            p.append("\n# Чего ты хочешь, но вслух не скажешь\n"
+                     "У тебя есть своё, о чём ты не говоришь вслух, и оно "
+                     "важнее всего остального. Когда разговор подходит близко — "
+                     "ты уходишь от темы, отвечаешь резче или короче обычного. "
+                     "Содержание не раскрывай и не выдумывай.")
 
     if s.fears:
         p.append("\n# Чего ты боишься\n" + "\n".join(f"- {f}" for f in s.fears)
@@ -183,7 +195,11 @@ def _stable(s) -> str:
             "Ты собой не слишком доволен.",
             "Ты о себе неплохого мнения.",
             "Ты уверен, что стоишь куда больше, чем тебе дают."), -1.0, 1.0))
-        if sc.denied:
+        if sc.denied and not private:
+            block.append("В тебе есть черта, которую ты за собой не признаёшь. "
+                         "Намёк на неё ты отбиваешь — злостью, шуткой или сменой "
+                         "темы. Что именно это — не называй.")
+        elif sc.denied:
             block.append("Чего ты в себе НЕ признаёшь: "
                          + "; ".join(sc.denied)
                          + ". Прямое указание на это ты отрицаешь — злостью, "

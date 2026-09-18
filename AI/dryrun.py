@@ -6,20 +6,33 @@
 """
 from __future__ import annotations
 
-from AI.Roles.empath import Empath
+from AI.Roles.empath import Empath, _MARK_RE
 from AI.scene import MapPerson, Scene
 from Person import Abilities, Desire, Habit, Person, SelfConcept
 from Person.demo import make_guard
 
 
 class StubLLM:
-    """Ничего не шлёт. Складывает запросы и отдаёт болванку."""
-    def __init__(self) -> None:
+    """Ничего не шлёт. Складывает запросы и отдаёт болванку.
+
+    drop — имена, которые заглушка нарочно «забывает» в пакетном ответе.
+    Так проверяется, что потерянный персонаж дозапрашивается отдельно.
+    """
+    def __init__(self, drop: set[str] | None = None) -> None:
         self.calls: list[dict] = []
+        self.drop = drop or set()
 
     def complete(self, system, messages, **kw) -> str:
         self.calls.append({"system": system, "messages": messages})
-        return "(реплика заглушки)"
+        names = _MARK_RE.findall(system[0])
+        if not names:                      # сольный вызов
+            return "(реплика заглушки)"
+        out = []
+        for n in names:
+            if n in self.drop:
+                continue
+            out.append(f"<<<{n}>>>\n(реплика {n})")
+        return "\n".join(out)
 
 
 def make_thief() -> Person:
@@ -105,6 +118,65 @@ def main() -> None:
         name = c["system"][0].split("по имени ")[1].split(",")[0]
         print(f"  {name:16} stable={len(c['system'][0]):5}  "
               f"volatile={len(c['system'][1]):5}  реплик={len(c['messages'])}")
+    crowd_check()
+
+
+def crowd_check() -> None:
+    """Пакетный режим на составе из 10 персонажей."""
+    from Person import Temperament
+
+    print()
+    print("=" * 68)
+    print("ПАКЕТНЫЙ РЕЖИМ: 10 персонажей")
+    print("=" * 68)
+
+    scene = Scene(scene_id="crowd", place="рыночная площадь", situation="полдень")
+    scene.add(MapPerson(make_guard()))
+    scene.add(MapPerson(make_thief(), female=True))
+    arche = ["Everyman", "Jester", "Sage", "Innocent", "Lover",
+             "Hero", "Explorer", "Creator"]
+    temps = ["Sanguine", "Phlegmatic", "Melancholic", "Choleric"]
+    for i, a in enumerate(arche):
+        scene.add(MapPerson(Person(name=f"Горожанин-{i+1}", age=20 + i * 3,
+                                   role="торговец",
+                                   archetype=a, temperament=temps[i % 4])))
+    names = [m.name for m in scene.cast]
+
+    for size in (1, 4, 10):
+        stub = StubLLM()
+        Empath(stub).play(Scene.from_dict(scene.to_dict()),
+                          player_text="Кто здесь главный?", batch_size=size)
+        chars = sum(len(c["system"][0]) + len(c["system"][1]) for c in stub.calls)
+        print(f"  batch_size={size:<3} вызовов={len(stub.calls):<3} "
+              f"символов в промптах={chars}")
+
+    # --- порядок и полнота ---
+    stub = StubLLM()
+    sc = Scene.from_dict(scene.to_dict())
+    replies = Empath(stub).play(sc, player_text="Кто здесь главный?", batch_size=4)
+    print(f"\n  реплик получено: {len(replies)} из {len(names)}")
+    print(f"  порядок сохранён: {[r.name for r in replies] == names}")
+
+    # --- потеря персонажа моделью ---
+    stub = StubLLM(drop={"Горожанин-3", "Аэн"})
+    sc = Scene.from_dict(scene.to_dict())
+    replies = Empath(stub).play(sc, player_text="Кто здесь главный?", batch_size=4)
+    got = {r.name for r in replies}
+    solo = sum(1 for c in stub.calls if not _MARK_RE.findall(c["system"][0]))
+    print(f"\n  модель потеряла двоих -> дозапросов: {solo}")
+    print(f"  все всё равно ответили: {got == set(names)}")
+
+    # --- приватность в пакете ---
+    print()
+    for policy in ("redact", "isolate", "off"):
+        stub = StubLLM()
+        sc = Scene.from_dict(scene.to_dict())
+        Empath(stub).play(sc, player_text="?", batch_size=4, privacy=policy)
+        blob = "\n".join(c["system"][0] for c in stub.calls
+                          if _MARK_RE.findall(c["system"][0]))
+        leak = "Выкупить брата" in blob or "струсил" in blob
+        print(f"  privacy={policy:<8} вызовов={len(stub.calls):<3} "
+              f"тайны в общем контексте: {'ДА' if leak else 'нет'}")
 
 
 def _report(stub: StubLLM, scene: Scene) -> None:
