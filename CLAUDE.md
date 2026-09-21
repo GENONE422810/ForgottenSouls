@@ -26,6 +26,7 @@ RPG-песочница, где игрок — ослабевшая душа бо
     python3 -m AI.dryrun      # весь цикл на заглушке, без токенов
     python3 -m Person.demo    # разбор одной личности
     python3 -m World.demo     # хранилище: индекс, обход, roundtrip
+    python3 -m World.view_demo # обёртки над записями
     python3 main.py           # живой диалог, нужен AI/.env с ключом
 
 `AI/dryrun.py` — основной способ проверки. Он гоняет сцену на `StubLLM`
