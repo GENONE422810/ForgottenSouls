@@ -16,31 +16,63 @@ from __future__ import annotations
 
 import json
 
-# Какие поля каждого типа являются ссылками. Единственное место, где это
-# знание записано: и обход, и валидация, и индекс читают отсюда.
+# Где в записи лежат ссылки. Путь может уходить вглубь и ветвиться:
+#   "world"                  — поле верхнего уровня
+#   "soul.domains"           — поле внутри вложенного объекта
+#   "instances.*.of"         — одноимённое поле у каждого элемента словаря
+# Это единственное место, где знание о ссылках записано: обход, индекс
+# и проверка целостности читают отсюда.
 REF_FIELDS: dict[str, tuple[str, ...]] = {
-    "plane":     (),
-    "world":     ("plane", "territoryis"),
-    "territoryis": ("world",),
-    "region":    ("territoryis", "gouverment"),
-    "gouverment": ("world", "глава", "наследник", "army"),
-    "ideology":  ("world", "god"),
-    "army":      (),
-    "division":  ("army", "pos"),
-    "person":    ("current_world", "ideology", "battle"),
-    "mob":       ("battle",),
-    "combatant": (),
-    "tile":      (),
-    "domain":    (),
-    "skill":     (),
-    "event":     ("who", "refs", "where"),
+    "meta":         ("player",),
+    "plane":        (),
+    "world":        ("plane",),
+    "region":       ("world", "gouverment"),
+    "gouverment":   ("world", "ruler", "heir"),
+    "army":         ("gouverment",),
+    "division":     ("army", "pos"),
+    "ideology":     ("world", "god"),
+    "person":       ("world", "region", "ideology", "family", "battle",
+                     "soul.domains", "soul.skills", "soul.spells",
+                     "soul.constellations",
+                     "personality.state.episodes.*.who"),
+    "mob":          ("world", "region", "battle"),
+    "combatant":    ("skills",),
+    "tile":         (),
+    "domain":       (),
+    "path":         ("domain", "branches"),
+    "skill":        (),
+    "spell":        ("owner", "domain"),
+    "constellation": (),
+    "event":        ("who", "refs", "where.plane", "where.world", "where.region"),
+    "battle":       ("region", "instances.*.of", "instances.*.actor"),
 }
 
-# Поля-словари, где ключ — это id (ребро с данными: доля, вес, отношение).
+# Пути до словарей, где ИД является ключом: ребро с данными.
 REF_MAPS: dict[str, tuple[str, ...]] = {
-    "region": ("faiths",),
-    "person": ("attitudes",),
+    "region": ("population.faiths",),
+    "person": ("personality.state.attitudes", "soul.progress"),
 }
+
+
+def _walk(node, parts: tuple[str, ...]):
+    """Пройти по пути внутри записи. `*` разворачивает список или словарь."""
+    if node is None:
+        return
+    if not parts:
+        yield node
+        return
+    head, rest = parts[0], parts[1:]
+    if head == "*":
+        items = node.values() if isinstance(node, dict) else node
+        if isinstance(items, (list, tuple, type({}.values()))):
+            for it in items:
+                yield from _walk(it, rest)
+        return
+    if isinstance(node, dict):
+        yield from _walk(node.get(head), rest)
+    elif isinstance(node, list):
+        for it in node:
+            yield from _walk(it, parts)
 
 
 class Store:
@@ -55,17 +87,18 @@ class Store:
         r = self.rec.get(rid)
         if not r:
             return []
+        kind = r.get("type", "")
         out: list[str] = []
-        for f in REF_FIELDS.get(r.get("type", ""), ()):
-            v = r.get(f)
-            if isinstance(v, str):
-                out.append(v)
-            elif isinstance(v, list):
-                out.extend(x for x in v if isinstance(x, str))
-        for f in REF_MAPS.get(r.get("type", ""), ()):
-            v = r.get(f)
-            if isinstance(v, dict):
-                out.extend(v.keys())
+        for path in REF_FIELDS.get(kind, ()):
+            for v in _walk(r, tuple(path.split("."))):
+                if isinstance(v, str):
+                    out.append(v)
+                elif isinstance(v, list):
+                    out.extend(x for x in v if isinstance(x, str))
+        for path in REF_MAPS.get(kind, ()):
+            for v in _walk(r, tuple(path.split("."))):
+                if isinstance(v, dict):
+                    out.extend(k for k in v if isinstance(k, str))
         return out
 
     def reindex(self) -> None:
