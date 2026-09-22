@@ -1,0 +1,280 @@
+{
+  "meta": {
+    "type": "meta",
+    "schema_version": 1,
+    "tick": 4120,
+    "player": "per.1",
+    "seed": "8f3ac1d0",
+    "saved_at": "2026-09-22T19:10:00Z"
+  },
+
+  "plane.1": {
+    "type": "plane",
+    "name": "Первый пласт",
+    "description": "Осколок исконного мира, осевший ближе всех к свету."
+  },
+
+  "world.1": {
+    "type": "world",
+    "name": "Ирм",
+    "plane": "plane.1",
+    "grid": { "w": 100, "h": 100, "region_km2": 100 }
+  },
+
+  "reg.7": {
+    "type": "region",
+    "name": "Южные ворота",
+    "world": "world.1",
+    "pos": [42, 17],
+    "biome": "steppe",
+    "gouverment": "gov.1",
+    "population": {
+      "total": 41000,
+      "faiths": { "ideo.1": 0.7, "ideo.2": 0.2 }
+    },
+    "resources": { "food": 5200, "goods": 800, "gold": 140 },
+    "lod": "full",
+    "simulated_to": 4120
+  },
+
+  "gov.1": {
+    "type": "gouverment",
+    "name": "Венец",
+    "world": "world.1",
+    "form": "выборная монархия",
+    "description": "Держит южные тракты и кормится с пошлин.",
+    "ruler": "per.1",
+    "heir": null,
+    "laws": ["подорожная обязательна после заката"],
+    "treasury": 12400
+  },
+
+  "army.1": {
+    "type": "army",
+    "name": "Первое войско",
+    "gouverment": "gov.1",
+    "morale": 0.7,
+    "supply": 0.9
+  },
+
+  "div.3": {
+    "type": "division",
+    "name": "Копейщики Венца",
+    "army": "army.1",
+    "pos": "reg.7",
+    "manpower": 2400,
+    "armament": { "spear": 2400, "shield": 2100 }
+  },
+
+  "ideo.1": {
+    "type": "ideology",
+    "name": "Хранители Света",
+    "world": "world.1",
+    "kind": "религия",
+    "god": "per.2",
+    "rules": ["огонь на маяке не гасят даже в бурю"]
+  },
+
+  "per.1": {
+    "type": "person",
+    "name": "Ведор Крайн",
+    "age": 44,
+    "role": "десятник городской стражи",
+    "world": "world.1",
+    "region": "reg.7",
+    "ideology": "ideo.1",
+    "family": [],
+    "battle": "comb.1",
+    "personality": {
+      "temperament": { "reactivity": 0.87, "inertia": 0.73, "energy": 0.72, "tone": -0.19 },
+      "archetype_mix": { "Ruler": 0.6, "Caregiver": 0.4 },
+      "character": { "warmth": 0.285, "discipline": 0.392, "courage": 0.506, "pride": 0.48 },
+      "desires": [
+        { "text": "Чтобы в квартале был порядок", "need": "order", "weight": 0.9, "secret": false },
+        { "text": "Чтобы кто-нибудь сказал, что ты сделал всё, что мог", "need": "belonging", "weight": 0.8, "secret": true }
+      ],
+      "habits": [
+        { "trigger": "нервничает", "action": "трёт зазубрину на рукояти", "strength": 0.7, "verbal": false }
+      ],
+      "abilities": { "меч": 0.8, "дознание": 0.6 },
+      "self_concept": {
+        "self_esteem": -0.3,
+        "identity": ["Ты солдат, а не палач"],
+        "denied": ["что ты тогда струсил"]
+      },
+      "state": {
+        "mood": { "pleasure": -0.31, "arousal": 0.42, "dominance": -0.18 },
+        "needs": { "order": 0.8, "status": 0.5, "belonging": 0.7 },
+        "stamina": 0.55,
+        "attitudes": { "per.2": -0.5 },
+        "episodes": [
+          { "what": "провела чужаков через твой пост", "who": "per.2", "valence": -0.8, "weight": 1.0, "tick": 4118 }
+        ]
+      }
+    },
+    "soul": {
+      "domains": ["dom.1"],
+      "progress": { "pth.1": 4 },
+      "skills": ["skl.1"],
+      "spells": ["spl.1"],
+      "constellations": ["con.1"],
+      "ash": 74,
+      "mind_power": 88,
+      "mind_power_max": 105
+    }
+  },
+
+  "mob.2": {
+    "type": "mob",
+    "name": "Стая пустошных псов",
+    "world": "world.1",
+    "region": "reg.7",
+    "battle": "comb.2",
+    "count": 7,
+    "behaviour": "территориальны, нападают на одиночек"
+  },
+
+  "comb.1": {
+    "type": "combatant",
+    "name": "городской стражник",
+    "hp": 120,
+    "speed": 4,
+    "properties": { "armor": "кольчуга", "size": "medium" },
+    "effects": [],
+    "skills": ["skl.1"]
+  },
+
+  "tile.1": {
+    "type": "tile",
+    "name": "каменная колонна",
+    "hp": 200,
+    "breakable": true,
+    "size": [1, 1],
+    "properties": { "blocks_sight": true, "blocks_move": true }
+  },
+
+  "dom.1": {
+    "type": "domain",
+    "name": "Домен стали",
+    "soul_part": "рассудок",
+    "description": "Власть над кромкой, закалкой и усталостью металла.",
+    "glyphs": ["edge", "temper"]
+  },
+
+  "pth.1": {
+    "type": "path",
+    "name": "Кромка",
+    "domain": "dom.1",
+    "branches_at": 4,
+    "branches": [],
+    "perks": ["правка лезвия", "разрез по слою", "усталость металла", "кромка без металла"]
+  },
+
+  "skl.1": {
+    "type": "skill",
+    "name": "Выпад",
+    "description": "Короткий укол в разрыв стойки.",
+    "can_damage": true,
+    "damage": 18,
+    "can_heal": false,
+    "range_type": "melee",
+    "effects": ["уязвимость:1"],
+    "properties": {
+      "kind": "приём",
+      "counters": "щит, разрыв дистанции",
+      "requires": { "меч": 0.4 }
+    }
+  },
+
+  "spl.1": {
+    "type": "spell",
+    "name": "Разрушение",
+    "owner": "per.1",
+    "domain": "dom.1",
+    "damage": 300,
+    "damage_type": "AOE",
+    "range_type": "touch",
+    "mind_cost": 12,
+    "description_for_judje": "Металл и камень в радиусе трёх шагов теряют связность и осыпаются.",
+    "circle": {
+      "outer": ["f1", "f2"],
+      "middle": [
+        { "from": "f1", "line": "direct", "to": "core" },
+        { "from": "core", "line": "dotted", "to": "f2" }
+      ],
+      "inner": { "core_mode": "cooling", "heat": 0.0 },
+      "functions": {
+        "f1": "[∆fire(heat)/infront/]",
+        "f2": "[∆fire(sphere)/exfront/target/launch/]"
+      }
+    }
+  },
+
+  "con.1": {
+    "type": "constellation",
+    "name": "Ночной дозор",
+    "stars": 3,
+    "mind_bonus": 0.05,
+    "opened_at": 3980
+  },
+
+  "ev.12": {
+    "type": "event",
+    "name": "ночной досмотр",
+    "kind": "встреча",
+    "description": "Стража остановила проводницу с чужаками у южных ворот.",
+    "when": 4118,
+    "who": ["per.1", "per.2"],
+    "where": { "plane": "plane.1", "world": "world.1", "region": "reg.7" },
+    "importance": 0.8,
+    "refs": ["gov.1"]
+  },
+
+  "btl.1": {
+    "type": "battle",
+    "region": "reg.7",
+    "started": 4120,
+    "round": 3,
+    "order": ["i1", "i2"],
+    "instances": {
+      "i1": { "of": "comb.1", "actor": "per.1", "pos": [3, 4], "hp": 96, "effects": [] },
+      "i2": { "of": "comb.2", "actor": "mob.2", "pos": [7, 4], "hp": 40, "effects": ["кровотечение"] },
+      "i3": { "of": "tile.1", "pos": [5, 4], "hp": 200 }
+    }
+  },
+
+  "per.2": {
+    "type": "person",
+    "name": "Аэн",
+    "age": 23,
+    "role": "контрабандистка",
+    "world": "world.1",
+    "region": "reg.7",
+    "ideology": "ideo.2",
+    "family": [],
+    "battle": "comb.2",
+    "soul": {
+      "domains": [], "progress": {}, "skills": [], "spells": [],
+      "constellations": [], "ash": 80, "mind_power": 100, "mind_power_max": 100
+    }
+  },
+
+  "ideo.2": {
+    "type": "ideology",
+    "name": "Молчащие",
+    "world": "world.1",
+    "kind": "светская",
+    "god": null,
+    "rules": ["имени не называют дважды"]
+  },
+
+  "comb.2": {
+    "type": "combatant",
+    "name": "пустошный пёс",
+    "hp": 40,
+    "speed": 7,
+    "properties": { "size": "small" },
+    "effects": [],
+    "skills": []
+  }
+}
